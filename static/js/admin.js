@@ -299,7 +299,7 @@ async function _loadModelsForUser(username, allowedSet, modelsRestricted, blockA
       });
       // Three distinct states the backend must be able to tell apart:
       //  - all checked   -> no restriction (allowed_models: [], block_all_models: false)
-      //  - none checked  -> block everything (allowed_models: [], block_all_models: true)
+      //  - none checked  -> user sees only own endpoints  // DIMCIC (allowed_models: [], block_all_models: true)
       //  - some checked  -> allowlist (allowed_models: checked, block_all_models: false)
       let value, hintText;
       if (checked.length === allModels.length) {
@@ -309,9 +309,9 @@ async function _loadModelsForUser(username, allowedSet, modelsRestricted, blockA
         hintText = 'All models allowed (no restrictions)';
       } else if (checked.length === 0) {
         restricted = true;
-        blockAll = true;
+        blockAll = false;  // DIMCIC
         value = [];
-        hintText = 'No models allowed';
+        hintText = 'Only own API keys';  // DIMCIC
       } else {
         restricted = true;
         blockAll = false;
