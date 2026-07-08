@@ -2154,7 +2154,18 @@ def setup_model_routes(model_discovery):
     @router.get("/model-endpoints/{ep_id}/probe")
     def probe_endpoint_models(ep_id: str, request: Request):
         """Re-probe all models on an endpoint. Updates hidden_models and streams SSE results."""
-        require_admin(request)
+        # DIMCIC: Allow endpoint owner to probe their own endpoint
+        from src.auth_helpers import get_current_user as _gcu_ep, is_admin_user as _iau_ep
+        _current_ep = _gcu_ep(request) or None
+        _is_admin_ep = bool(_current_ep and _iau_ep(_current_ep))
+        if not _is_admin_ep:
+            db = SessionLocal()
+            try:
+                _ep_chk = db.query(ModelEndpoint).filter(ModelEndpoint.id == ep_id).first()
+                if not _ep_chk or (_ep_chk.owner and _ep_chk.owner != _current_ep):
+                    raise HTTPException(status_code=403, detail="Not your endpoint")
+            finally:
+                db.close()
         db = SessionLocal()
         try:
             ep = db.query(ModelEndpoint).filter(ModelEndpoint.id == ep_id).first()
@@ -2210,7 +2221,18 @@ def setup_model_routes(model_discovery):
         refresh_timeout: Optional[int] = Query(None, ge=1, le=60),
     ):
         """List all discovered models for an endpoint with hidden/visible state."""
-        require_admin(request)
+        # DIMCIC: Allow endpoint owner to list models on their own endpoint
+        from src.auth_helpers import get_current_user as _gcu_ep, is_admin_user as _iau_ep
+        _current_ep = _gcu_ep(request) or None
+        _is_admin_ep = bool(_current_ep and _iau_ep(_current_ep))
+        if not _is_admin_ep:
+            db = SessionLocal()
+            try:
+                _ep_chk = db.query(ModelEndpoint).filter(ModelEndpoint.id == ep_id).first()
+                if not _ep_chk or (_ep_chk.owner and _ep_chk.owner != _current_ep):
+                    raise HTTPException(status_code=403, detail="Not your endpoint")
+            finally:
+                db.close()
         db = SessionLocal()
         try:
             ep = db.query(ModelEndpoint).filter(ModelEndpoint.id == ep_id).first()
@@ -2261,7 +2283,18 @@ def setup_model_routes(model_discovery):
         Each key is updated only when present, so callers can patch one list
         without clobbering the other.
         """
-        require_admin(request)
+        # DIMCIC: Allow endpoint owner to update hidden/pinned models for their own endpoint
+        from src.auth_helpers import get_current_user as _gcu_ep, is_admin_user as _iau_ep
+        _current_ep = _gcu_ep(request) or None
+        _is_admin_ep = bool(_current_ep and _iau_ep(_current_ep))
+        if not _is_admin_ep:
+            db = SessionLocal()
+            try:
+                _ep_chk = db.query(ModelEndpoint).filter(ModelEndpoint.id == ep_id).first()
+                if not _ep_chk or (_ep_chk.owner and _ep_chk.owner != _current_ep):
+                    raise HTTPException(status_code=403, detail="Not your endpoint")
+            finally:
+                db.close()
         db = SessionLocal()
         try:
             ep = db.query(ModelEndpoint).filter(ModelEndpoint.id == ep_id).first()
@@ -2403,7 +2436,10 @@ def setup_model_routes(model_discovery):
 
     @router.patch("/model-endpoints/{ep_id}")
     async def toggle_model_endpoint(ep_id: str, request: Request):
-        require_admin(request)
+        # DIMCIC: Allow endpoint owner to enable/disable their own endpoint
+        from src.auth_helpers import get_current_user as _gcu_ep, is_admin_user as _iau_ep
+        _current_ep = _gcu_ep(request) or None
+        _is_admin_ep = bool(_current_ep and _iau_ep(_current_ep))
         # Optional JSON body for field-targeted updates. No body → toggle is_enabled (legacy behaviour).
         body: Dict[str, Any] = {}
         try:
@@ -2567,7 +2603,18 @@ def setup_model_routes(model_discovery):
 
     @router.delete("/model-endpoints/{ep_id}")
     def delete_model_endpoint(ep_id: str, request: Request):
-        require_admin(request)
+        # DIMCIC: Allow endpoint owner to delete their own endpoint
+        from src.auth_helpers import get_current_user as _gcu_ep, is_admin_user as _iau_ep
+        _current_ep = _gcu_ep(request) or None
+        _is_admin_ep = bool(_current_ep and _iau_ep(_current_ep))
+        if not _is_admin_ep:
+            db = SessionLocal()
+            try:
+                _ep_chk = db.query(ModelEndpoint).filter(ModelEndpoint.id == ep_id).first()
+                if not _ep_chk or (_ep_chk.owner and _ep_chk.owner != _current_ep):
+                    raise HTTPException(status_code=403, detail="Not your endpoint")
+            finally:
+                db.close()
         db = SessionLocal()
         try:
             ep = db.query(ModelEndpoint).filter(ModelEndpoint.id == ep_id).first()
