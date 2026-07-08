@@ -1395,9 +1395,10 @@ def setup_model_routes(model_discovery):
                 _invalidate_models_cache()
             q = db.query(ModelEndpoint).filter(ModelEndpoint.is_enabled == True)
             if owner and not is_admin:
-                # Regular users see: their own endpoints + null-owner
-                # (legacy / shared). Admins see everything.
-                q = owner_filter(q, ModelEndpoint, owner)
+                # Admin explicitly granted models via allowed_models — skip owner filter
+                # so those models show. Otherwise enforce owner scope.
+                if allowed_models_filter is None:
+                    q = owner_filter(q, ModelEndpoint, owner)
             endpoints = q.all()
         finally:
             db.close()
@@ -1521,7 +1522,9 @@ def setup_model_routes(model_discovery):
                 _allowed_filter = []
             elif privs and privs.get('allowed_models'):
                 _allowed_filter = privs['allowed_models']
-            # else _allowed_filter stays None = unrestricted
+            else:
+                # No allowed_models set — show nothing
+                _allowed_filter = []
         result = _fetch_models(owner=owner, is_admin=_is_admin, allowed_models_filter=_allowed_filter)
         _models_cache[_cache_key] = {"data": result, "time": now}
         # Kick off background refresh to update caches from live endpoints.
