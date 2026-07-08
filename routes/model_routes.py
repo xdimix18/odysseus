@@ -2048,6 +2048,18 @@ def setup_model_routes(model_discovery):
             )
             db.add(ep)
             db.commit()
+            # DIMCIC: Auto-add models to user allowed_models when non-admin adds endpoint
+            _auth_mgr = getattr(request.app.state, "auth_manager", None)
+            if _auth_mgr and not _is_admin_cme and _current_cme and model_ids:
+                try:
+                    _user_privs = _auth_mgr.get_privileges(_current_cme)
+                    _existing = set(_user_privs.get("allowed_models") or [])
+                    _added = set(model_ids)
+                    _merged = sorted(_existing | _added)
+                    if _merged != sorted(_existing):
+                        _auth_mgr.set_privileges(_current_cme, {"allowed_models": _merged, "allowed_models_restricted": True})
+                except Exception:
+                    pass
             # Auto-set as default chat endpoint when none is usable yet — either
             # nothing is configured, or the configured default points at an
             # endpoint that is now missing/disabled (#3586). Seed the first CHAT

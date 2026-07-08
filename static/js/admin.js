@@ -256,8 +256,9 @@ async function _loadModelsForUser(username, allowedSet, modelsRestricted, blockA
     const allModels = [];
     (Array.isArray(data) ? data : []).forEach(ep => {
       if (!ep.online) return;
+      const owner = ep.owner || 'system';
       (ep.models || []).forEach(mid => {
-        allModels.push({ mid, epName: ep.name || '', display: mid.split('/').pop() });
+        allModels.push({ mid, epName: ep.name || '', display: mid.split('/').pop(), owner: owner });
       });
     });
     if (!allModels.length) {
@@ -266,14 +267,29 @@ async function _loadModelsForUser(username, allowedSet, modelsRestricted, blockA
     }
     let restricted = modelsRestricted;
     let blockAll = blockAllModels;
-    listEl.innerHTML = sortModelObjects(allModels).map(m => {
-      const checked = !blockAll && (!restricted || allowedSet.has(m.mid)) ? 'checked' : '';
-      return `<label>
+    // DIMCIC: Group models by owner with separators
+    const sorted = sortModelObjects(allModels);
+    const byOwner = {};
+    sorted.forEach(m => {
+      if (!byOwner[m.owner]) byOwner[m.owner] = [];
+      byOwner[m.owner].push(m);
+    });
+    let html = '';
+    const ownerNames = Object.keys(byOwner).sort();
+    ownerNames.forEach((owner, oi) => {
+      if (oi > 0) html += '<div style="height:1px;background:var(--border);margin:4px 0;"></div>';
+      const ownerLabel = owner === username ? 'My models' : (owner === 'system' ? 'Shared models' : owner);
+      html += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;opacity:0.35;font-weight:600;padding:2px 0;">---------- ' + esc(ownerLabel) + ' ----------</div>';
+      byOwner[owner].forEach(m => {
+        const checked = !blockAll && (!restricted || allowedSet.has(m.mid)) ? 'checked' : '';
+        html += `<label>
         <input type="checkbox" class="priv-model-cb" data-mid="${esc(m.mid)}" ${checked}>
         <span>${esc(m.display)}</span>
         <span style="opacity:0.3;font-size:10px;margin-left:auto;">${esc(m.epName)}</span>
       </label>`;
-    }).join('');
+      });
+    });
+    listEl.innerHTML = html;
 
     // Save on change
     function _saveModels() {
