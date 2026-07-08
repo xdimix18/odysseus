@@ -2155,9 +2155,9 @@ def setup_model_routes(model_discovery):
     def probe_endpoint_models(ep_id: str, request: Request):
         """Re-probe all models on an endpoint. Updates hidden_models and streams SSE results."""
         # DIMCIC: Allow endpoint owner to probe their own endpoint
-        from src.auth_helpers import get_current_user as _gcu_ep, is_admin_user as _iau_ep
-        _current_ep = _gcu_ep(request) or None
-        _is_admin_ep = bool(_current_ep and _iau_ep(_current_ep))
+        _current_ep = getattr(request.state, "current_user", None)
+        _auth_mgr_ep = getattr(request.app.state, "auth_manager", None)
+        _is_admin_ep = bool(_current_ep and _auth_mgr_ep and _auth_mgr_ep.is_admin(_current_ep))
         if not _is_admin_ep:
             db = SessionLocal()
             try:
@@ -2222,9 +2222,9 @@ def setup_model_routes(model_discovery):
     ):
         """List all discovered models for an endpoint with hidden/visible state."""
         # DIMCIC: Allow endpoint owner to list models on their own endpoint
-        from src.auth_helpers import get_current_user as _gcu_ep, is_admin_user as _iau_ep
-        _current_ep = _gcu_ep(request) or None
-        _is_admin_ep = bool(_current_ep and _iau_ep(_current_ep))
+        _current_ep = getattr(request.state, "current_user", None)
+        _auth_mgr_ep = getattr(request.app.state, "auth_manager", None)
+        _is_admin_ep = bool(_current_ep and _auth_mgr_ep and _auth_mgr_ep.is_admin(_current_ep))
         if not _is_admin_ep:
             db = SessionLocal()
             try:
@@ -2284,9 +2284,9 @@ def setup_model_routes(model_discovery):
         without clobbering the other.
         """
         # DIMCIC: Allow endpoint owner to update hidden/pinned models for their own endpoint
-        from src.auth_helpers import get_current_user as _gcu_ep, is_admin_user as _iau_ep
-        _current_ep = _gcu_ep(request) or None
-        _is_admin_ep = bool(_current_ep and _iau_ep(_current_ep))
+        _current_ep = getattr(request.state, "current_user", None)
+        _auth_mgr_ep = getattr(request.app.state, "auth_manager", None)
+        _is_admin_ep = bool(_current_ep and _auth_mgr_ep and _auth_mgr_ep.is_admin(_current_ep))
         if not _is_admin_ep:
             db = SessionLocal()
             try:
@@ -2437,9 +2437,9 @@ def setup_model_routes(model_discovery):
     @router.patch("/model-endpoints/{ep_id}")
     async def toggle_model_endpoint(ep_id: str, request: Request):
         # DIMCIC: Allow endpoint owner to enable/disable their own endpoint
-        from src.auth_helpers import get_current_user as _gcu_ep, is_admin_user as _iau_ep
-        _current_ep = _gcu_ep(request) or None
-        _is_admin_ep = bool(_current_ep and _iau_ep(_current_ep))
+        _current_ep = getattr(request.state, "current_user", None)
+        _auth_mgr_ep = getattr(request.app.state, "auth_manager", None)
+        _is_admin_ep = bool(_current_ep and _auth_mgr_ep and _auth_mgr_ep.is_admin(_current_ep))
         # Optional JSON body for field-targeted updates. No body → toggle is_enabled (legacy behaviour).
         body: Dict[str, Any] = {}
         try:
@@ -2604,9 +2604,9 @@ def setup_model_routes(model_discovery):
     @router.delete("/model-endpoints/{ep_id}")
     def delete_model_endpoint(ep_id: str, request: Request):
         # DIMCIC: Allow endpoint owner to delete their own endpoint
-        from src.auth_helpers import get_current_user as _gcu_ep, is_admin_user as _iau_ep
-        _current_ep = _gcu_ep(request) or None
-        _is_admin_ep = bool(_current_ep and _iau_ep(_current_ep))
+        _current_ep = getattr(request.state, "current_user", None)
+        _auth_mgr_ep = getattr(request.app.state, "auth_manager", None)
+        _is_admin_ep = bool(_current_ep and _auth_mgr_ep and _auth_mgr_ep.is_admin(_current_ep))
         if not _is_admin_ep:
             db = SessionLocal()
             try:
