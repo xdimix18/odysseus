@@ -2387,6 +2387,12 @@ def setup_model_routes(model_discovery):
                     _new_base = _normalize_base(_new_base)
                     if _new_base:
                         ep.base_url = _new_base
+                # --- support toggling shared/private ---
+                if 'shared' in body:
+                    from src.auth_helpers import get_current_user as _gcu_shared
+                    _sv = str(body['shared']).strip().lower() in ('true', '1', 'yes')
+                    ep.owner = None if _sv else (_gcu_shared(request) or None)
+                # --- end shared/private toggle ---
             else:
                 ep.is_enabled = not ep.is_enabled
             db.commit()
@@ -2404,6 +2410,7 @@ def setup_model_routes(model_discovery):
                 "model_refresh_mode": getattr(ep, "model_refresh_mode", None) or "auto",
                 "model_refresh_interval": getattr(ep, "model_refresh_interval", None),
                 "model_refresh_timeout": getattr(ep, "model_refresh_timeout", None),
+                "owner": getattr(ep, "owner", None),
             }
         finally:
             db.close()
