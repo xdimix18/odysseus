@@ -1813,7 +1813,7 @@ def setup_model_routes(model_discovery):
             # DIMCIC: Non-admin users see only their own + shared endpoints
             _q_le = db.query(ModelEndpoint)
             if not _is_admin_le:
-                _q_le = owner_filter(_q_le, _current_le)
+                _q_le = owner_filter(_q_le, ModelEndpoint, _current_le)
             rows = _q_le.order_by(ModelEndpoint.created_at).all()
             results = []
             for r in rows:
