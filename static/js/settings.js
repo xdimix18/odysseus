@@ -41,6 +41,8 @@ function initTabs() {
       document.body.classList.toggle('settings-appearance-open', tab === 'appearance');
       syncAppearanceOpacity(tab === 'appearance');
       if (tab === 'ai') refreshAiModelEndpoints();
+      // DIMCIC: Render Added Models for non-admin users
+      if (tab === "added-models" && window.adminModule?.loadEndpoints) window.adminModule.loadEndpoints();
     });
   });
 }

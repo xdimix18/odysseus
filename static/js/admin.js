@@ -3127,5 +3127,5 @@ export function close() {
   settingsModule.close();
 }
 
-const adminModule = { open, close, _initData, get _initialized() { return initialized; } };
+const adminModule = { open, close, _initData, loadEndpoints, get _initialized() { return initialized; } };
 export default adminModule;
