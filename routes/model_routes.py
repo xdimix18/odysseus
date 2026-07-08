@@ -1800,12 +1800,19 @@ def setup_model_routes(model_discovery):
 
     @router.get("/model-endpoints")
     def list_model_endpoints(request: Request) -> List[Dict[str, Any]]:
-        require_admin(request)
+        # DIMCIC: Allow non-admin users to see their own + shared endpoints
+        from src.auth_helpers import get_current_user as _gcu_le, is_admin_user as _iau_le
+        _current_le = _gcu_le(request) or None
+        _is_admin_le = _iau_le(_current_le)
         db = SessionLocal()
         try:
             if _disable_stale_cookbook_local_endpoints(db):
                 _invalidate_models_cache()
-            rows = db.query(ModelEndpoint).order_by(ModelEndpoint.created_at).all()
+            # DIMCIC: Non-admin users see only their own + shared endpoints
+            _q_le = db.query(ModelEndpoint)
+            if not _is_admin_le:
+                _q_le = owner_filter(_q_le, _current_le)
+            rows = _q_le.order_by(ModelEndpoint.created_at).all()
             results = []
             for r in rows:
                 all_models = _cached_model_ids(r)
@@ -1839,6 +1846,7 @@ def setup_model_routes(model_discovery):
                     "model_refresh_mode": _endpoint_refresh_mode(r, kind),
                     "model_refresh_interval": getattr(r, "model_refresh_interval", None),
                     "model_refresh_timeout": getattr(r, "model_refresh_timeout", None),
+                    "owner": r.owner,  # DIMCIC: show who owns the endpoint
                 })
             return results
         finally:
@@ -1865,7 +1873,16 @@ def setup_model_routes(model_discovery):
         # scope a new endpoint to their own account only.
         shared: str = Form("true"),
     ):
-        require_admin(request)
+        # DIMCIC: Allow non-admin users to add their own API keys
+        # Non-admin users: endpoints are always private, no pinned_models, no tools
+        from src.auth_helpers import get_current_user as _gcu_cme, is_admin_user as _iau_cme
+        _current_cme = _gcu_cme(request) or None
+        _is_admin_cme = _iau_cme(_current_cme)
+        if not _is_admin_cme:
+            shared = "false"
+            pinned_models = ""
+            supports_tools = ""
+            model_refresh_mode = ""
         base_url = _normalize_base(base_url)
         if not base_url:
             raise HTTPException(400, "Base URL is required")
@@ -2008,8 +2025,9 @@ def setup_model_routes(model_discovery):
             # to all users), preserving the pre-fix "everyone sees everything"
             # behaviour for endpoints the admin explicitly intends to share.
             from src.auth_helpers import get_current_user as _gcu
-            _shared_flag = (shared or "").strip().lower() in ("true", "1", "yes")
-            _owner_val = None if _shared_flag else (_gcu(request) or None)
+            # DIMCIC: Non-admin endpoints always private, owned by the user
+            _shared_flag_cme = (shared or "").strip().lower() in ("true", "1", "yes")
+            _owner_val = None if (_shared_flag_cme and _is_admin_cme) else (_current_cme or _gcu(request) or None)
             ep = ModelEndpoint(
                 id=ep_id,
                 name=name.strip(),
@@ -2085,7 +2103,16 @@ def setup_model_routes(model_discovery):
         endpoint_kind: str = Form("auto"),
         model_refresh_timeout: str = Form(""),
     ):
-        require_admin(request)
+        # DIMCIC: Allow non-admin users to add their own API keys
+        # Non-admin users: endpoints are always private, no pinned_models, no tools
+        from src.auth_helpers import get_current_user as _gcu_cme, is_admin_user as _iau_cme
+        _current_cme = _gcu_cme(request) or None
+        _is_admin_cme = _iau_cme(_current_cme)
+        if not _is_admin_cme:
+            shared = "false"
+            pinned_models = ""
+            supports_tools = ""
+            model_refresh_mode = ""
         base_url = _normalize_base(base_url)
         if not base_url:
             raise HTTPException(400, "Base URL is required")
