@@ -1371,10 +1371,15 @@ def setup_model_routes(model_discovery):
                 _refresh_inflight["v"] = False
         threading.Thread(target=_do, daemon=True).start()
 
-    def _fetch_models(owner: str = "", is_admin: bool = False):
+    def _fetch_models(owner: str = "", is_admin: bool = False, allowed_models_filter: list = None):
         """Return model list from cached data (instant). Background refresh keeps caches fresh.
 
         SECURITY: filters endpoints by `owner` — without this the picker
+
+        When allowed_models_filter is a non-None list, each endpoint's
+        curated model list is further narrowed to ONLY those model IDs
+        that appear in the filter. Used to make the chat dropdown reflect
+        per-user allowed_models privileges set by the admin.
         leaked every admin-added endpoint (and the model list behind each
         one) to every authenticated user. NULL-owner rows are treated as
         legacy/shared so existing configs still appear after migration.
@@ -1422,6 +1427,13 @@ def setup_model_routes(model_discovery):
                     if m not in curated:
                         curated.append(m)
                 extra = [m for m in extra if m not in pinned]
+
+                # Filter by per-user allowed_models (privilege) when set
+                if allowed_models_filter is not None:
+                    fset = set(allowed_models_filter)
+                    curated = [m for m in curated if m in fset]
+                    extra = [m for m in extra if m in fset]
+
                 items.append({
                     "host": "custom",
                     "port": 0,
@@ -1497,7 +1509,20 @@ def setup_model_routes(model_discovery):
         cache_entry = _models_cache.get(_cache_key)
         if not refresh and cache_entry is not None and (now - cache_entry["time"]) < _MODELS_CACHE_TTL:
             return cache_entry["data"]
-        result = _fetch_models(owner=owner, is_admin=_is_admin)
+        # Build allowed_models filter from user privileges (non-admin only)
+        _allowed_filter = None
+        if not _is_admin and owner:
+            try:
+                privs = auth_mgr.get_privileges(owner) if auth_mgr else None
+            except Exception:
+                privs = None
+            if privs and (privs.get('block_all_models') or (privs.get('allowed_models_restricted') and not privs.get('allowed_models'))):
+                # User has no models allowed — return empty immediately
+                _allowed_filter = []
+            elif privs and privs.get('allowed_models'):
+                _allowed_filter = privs['allowed_models']
+            # else _allowed_filter stays None = unrestricted
+        result = _fetch_models(owner=owner, is_admin=_is_admin, allowed_models_filter=_allowed_filter)
         _models_cache[_cache_key] = {"data": result, "time": now}
         # Kick off background refresh to update caches from live endpoints.
         # Page boot can opt out with background=false so opening Odysseus does
