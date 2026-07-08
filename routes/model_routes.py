@@ -1801,9 +1801,10 @@ def setup_model_routes(model_discovery):
     @router.get("/model-endpoints")
     def list_model_endpoints(request: Request) -> List[Dict[str, Any]]:
         # DIMCIC: Allow non-admin users to see their own + shared endpoints
-        from src.auth_helpers import get_current_user as _gcu_le, is_admin_user as _iau_le
+        from src.auth_helpers import get_current_user as _gcu_le
         _current_le = _gcu_le(request) or None
-        _is_admin_le = _iau_le(_current_le)
+        _auth_mgr_le = getattr(request.app.state, "auth_manager", None)
+        _is_admin_le = _auth_mgr_le.is_admin(_current_le) if _auth_mgr_le and _current_le else False
         db = SessionLocal()
         try:
             if _disable_stale_cookbook_local_endpoints(db):
@@ -1875,9 +1876,10 @@ def setup_model_routes(model_discovery):
     ):
         # DIMCIC: Allow non-admin users to add their own API keys
         # Non-admin users: endpoints are always private, no pinned_models, no tools
-        from src.auth_helpers import get_current_user as _gcu_cme, is_admin_user as _iau_cme
+        from src.auth_helpers import get_current_user as _gcu_cme
         _current_cme = _gcu_cme(request) or None
-        _is_admin_cme = _iau_cme(_current_cme)
+        _auth_mgr_cme = getattr(request.app.state, "auth_manager", None)
+        _is_admin_cme = _auth_mgr_cme.is_admin(_current_cme) if _auth_mgr_cme and _current_cme else False
         if not _is_admin_cme:
             shared = "false"
             pinned_models = ""
@@ -2105,9 +2107,10 @@ def setup_model_routes(model_discovery):
     ):
         # DIMCIC: Allow non-admin users to add their own API keys
         # Non-admin users: endpoints are always private, no pinned_models, no tools
-        from src.auth_helpers import get_current_user as _gcu_cme, is_admin_user as _iau_cme
+        from src.auth_helpers import get_current_user as _gcu_cme
         _current_cme = _gcu_cme(request) or None
-        _is_admin_cme = _iau_cme(_current_cme)
+        _auth_mgr_cme = getattr(request.app.state, "auth_manager", None)
+        _is_admin_cme = _auth_mgr_cme.is_admin(_current_cme) if _auth_mgr_cme and _current_cme else False
         if not _is_admin_cme:
             shared = "false"
             pinned_models = ""
