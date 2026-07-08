@@ -2057,7 +2057,7 @@ def setup_model_routes(model_discovery):
                     _added = set(model_ids)
                     _merged = sorted(_existing | _added)
                     if _merged != sorted(_existing):
-                        _auth_mgr.set_privileges(_current_cme, {"allowed_models": _merged, "allowed_models_restricted": True})
+                        _auth_mgr.set_privileges(_current_cme, {"allowed_models": _merged, "allowed_models_restricted": True, "block_all_models": False})
                 except Exception:
                     pass
             # Auto-set as default chat endpoint when none is usable yet — either
