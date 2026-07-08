@@ -1429,8 +1429,9 @@ def setup_model_routes(model_discovery):
                         curated.append(m)
                 extra = [m for m in extra if m not in pinned]
 
-                # Filter by per-user allowed_models (privilege) when set
-                if allowed_models_filter is not None:
+                # DIMCIC: User always sees models from their own endpoints
+                _is_own_endpoint = (bool(owner) and ep.owner == owner)
+                if allowed_models_filter is not None and not _is_own_endpoint:
                     fset = set(allowed_models_filter)
                     curated = [m for m in curated if m in fset]
                     extra = [m for m in extra if m in fset]
