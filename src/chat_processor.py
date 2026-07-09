@@ -9,6 +9,8 @@ from src.chat_helpers import extract_urls
 from src.youtube_handler import is_youtube_url
 from src.search import comprehensive_web_search, fetch_webpage_content
 from src.prompt_security import UNTRUSTED_CONTEXT_POLICY, untrusted_context_message
+from src.skill_router_client import get_skill_router, load_skill_md
+from src.constants import DATA_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -419,5 +421,33 @@ class ChatProcessor:
                         desc = s.get("description") or ""
                         lines.append(f"    - {s['name']}: {desc}" if desc else f"    - {s['name']}")
                 preface.append(untrusted_context_message("available skills index", "\n".join(lines)))
+
+            # --- Skill Router: auto-detected relevant skills (parallel) ---
+            if agent_mode and not incognito and use_skills:
+                try:
+                    router = get_skill_router()
+                    router_results = router.query(message, k=10)
+                    if router_results:
+                        skill_contents = []
+                        for r in router_results[:5]:
+                            md = load_skill_md(r["name"], category=r.get("category", ""), data_dir=DATA_DIR)
+                            if md:
+                                truncated = md[:1500]
+                                if len(md) > 1500:
+                                    truncated += "\n... (truncated)"
+                                skill_contents.append(
+                                    "### " + r["name"] + " (score: " + str(round(r["score"], 2)) + ")\n" + truncated
+                                )
+                        if skill_contents:
+                            router_context = (
+                                "[Auto-detected relevant skills for this request - "
+                                "use manage_skills(action='view', name='...') to load full content]\n\n"
+                                + "\n\n---\n\n".join(skill_contents)
+                            )
+                            preface.append(untrusted_context_message(
+                                "auto-detected relevant skills", router_context
+                            ))
+                except Exception as e:
+                    logger.debug("Skill Router skipped: {}".format(e))
 
         return preface, rag_sources, web_sources
