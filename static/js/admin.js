@@ -276,46 +276,19 @@ async function _loadModelsForUser(username, allowedSet, modelsRestricted, blockA
     });
     let html = '';
     const ownerNames = Object.keys(byOwner).sort();
-    // DIMCIC: Collapsible groups with Enable All / Disable All
     ownerNames.forEach((owner, oi) => {
-      const groupId = 'priv-group-' + username + '-' + oi;
+      if (oi > 0) html += '<div style="height:1px;background:var(--border);margin:4px 0;"></div>';
       const ownerLabel = owner === username ? 'My models' : (owner === 'system' ? 'Shared models' : owner);
-      const modelCount = byOwner[owner].length;
-      html += '<div style="margin:4px 0;border:1px solid var(--border);border-radius:4px;overflow:hidden;">';
-      html += '<div class="priv-group-header" data-group="' + groupId + '" style="display:flex;align-items:center;padding:4px 6px;background:var(--bg-secondary,#f0f0f0);cursor:pointer;user-select:none;font-size:11px;font-weight:600;">';
-      html += '<span class="priv-group-arrow" data-group="' + groupId + '" style="display:inline-block;width:12px;transition:transform 0.15s;">&#9654;</span> ';
-      html += '<span style="opacity:0.5;margin-right:4px;">(' + modelCount + ')</span>';
-      html += esc(ownerLabel);
-      html += '<span style="flex:1;"></span>';
-      html += '<button class="priv-group-enable-all" data-group="' + groupId + '" style="font-size:10px;padding:1px 5px;margin-left:3px;border:1px solid var(--border);border-radius:3px;background:var(--bg);cursor:pointer;">All</button>';
-      html += '<button class="priv-group-disable-all" data-group="' + groupId + '" style="font-size:10px;padding:1px 5px;margin-left:2px;border:1px solid var(--border);border-radius:3px;background:var(--bg);cursor:pointer;">None</button>';
-      html += '</div>';
-      html += '<div class="priv-group-body" data-group="' + groupId + '" style="display:none;max-height:220px;overflow-y:auto;">';
+      html += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;opacity:0.35;font-weight:600;padding:2px 0;">---------- ' + esc(ownerLabel) + ' ----------</div>';
       byOwner[owner].forEach(m => {
         const checked = !blockAll && (!restricted || allowedSet.has(m.mid)) ? 'checked' : '';
-        html += '<label style="display:flex;align-items:center;padding:2px 8px;font-size:11px;border-bottom:1px solid rgba(0,0,0,0.05);">';
-        html += '<input type="checkbox" class="priv-model-cb" data-mid="' + esc(m.mid) + '" ' + checked + ' style="margin-right:4px;">';
-        html += '<span>' + esc(m.display) + '</span>';
-        html += '<span style="opacity:0.3;font-size:10px;margin-left:auto;">' + esc(m.epName) + '</span>';
-        html += '</label>';
+        html += `<label>
+        <input type="checkbox" class="priv-model-cb" data-mid="${esc(m.mid)}" ${checked}>
+        <span>${esc(m.display)}</span>
+        <span style="opacity:0.3;font-size:10px;margin-left:auto;">${esc(m.epName)}</span>
+      </label>`;
       });
-      html += '</div></div>';
     });
-
-    // DIMCIC: Attach collapse/expand + Enable/Disable All handlers
-    setTimeout(function() {
-      listEl.querySelectorAll('.priv-group-header').forEach(function(header) {
-        header.addEventListener('click', function(e) {
-          if (e.target.tagName === 'BUTTON') return;
-          var gid = this.getAttribute('data-group');
-          var body = listEl.querySelector('.priv-group-body[data-group="' + gid + '"]');
-          var arrow = listEl.querySelector('.priv-group-arrow[data-group="' + gid + '"]');
-          if (body) { var isOpen = body.style.display !== 'none'; body.style.display = isOpen ? 'none' : 'block'; if (arrow) arrow.style.transform = isOpen ? '' : 'rotate(90deg)'; }
-        });
-      });
-      listEl.querySelectorAll('.priv-group-enable-all').forEach(function(btn) { btn.addEventListener('click', function(e) { e.stopPropagation(); var gid = this.getAttribute('data-group'); var body = listEl.querySelector('.priv-group-body[data-group="' + gid + '"]'); if (body) { body.querySelectorAll('.priv-model-cb').forEach(function(cb) { cb.checked = true; }); body.style.display = 'block'; var arrow = listEl.querySelector('.priv-group-arrow[data-group="' + gid + '"]'); if (arrow) arrow.style.transform = 'rotate(90deg)'; _saveModels(); } }); });
-      listEl.querySelectorAll('.priv-group-disable-all').forEach(function(btn) { btn.addEventListener('click', function(e) { e.stopPropagation(); var gid = this.getAttribute('data-group'); var body = listEl.querySelector('.priv-group-body[data-group="' + gid + '"]'); if (body) { body.querySelectorAll('.priv-model-cb').forEach(function(cb) { cb.checked = false; }); body.style.display = 'block'; var arrow = listEl.querySelector('.priv-group-arrow[data-group="' + gid + '"]'); if (arrow) arrow.style.transform = 'rotate(90deg)'; _saveModels(); } }); });
-    }, 50);   });
     listEl.innerHTML = html;
 
     // Save on change
